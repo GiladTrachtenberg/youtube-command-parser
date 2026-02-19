@@ -90,11 +90,12 @@ async fn main() {
                 .enable_http2()
                 .build(),
         );
+    let video_id = std::env::var("VIDEO_ID").expect("VIDEO_ID not set");
     let hub = YouTube::new(client, auth);
     let result = hub
         .comment_threads()
         .list(&vec!["snippet".into()])
-        .video_id("G8NWijCUcXg")
+        .video_id(&video_id)
         .doit()
         .await;
 
