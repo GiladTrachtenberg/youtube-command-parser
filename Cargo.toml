@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 google-youtube3 = "7.0.0"
+yup-oauth2 = "12.1.2"
