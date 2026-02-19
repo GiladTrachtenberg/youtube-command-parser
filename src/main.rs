@@ -1,4 +1,6 @@
 use google_youtube3::Error;
+use google_youtube3::api::CommentThreadListResponse;
+use google_youtube3::yup_oauth2::ApplicationSecret;
 use google_youtube3::{YouTube, hyper_rustls, hyper_util, yup_oauth2};
 use yup_oauth2::authenticator_delegate::InstalledFlowDelegate;
 
@@ -18,8 +20,7 @@ impl InstalledFlowDelegate for BrowserDelegate {
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn build_secret() -> ApplicationSecret {
     let secret = yup_oauth2::ApplicationSecret {
         client_id: std::env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID not set"),
         client_secret: std::env::var("GOOGLE_CLIENT_SECRET").expect("GOOGLE_CLIENT_SECRET not set"),
@@ -31,6 +32,35 @@ async fn main() {
         auth_provider_x509_cert_url: None,
         client_x509_cert_url: None,
     };
+    return secret;
+}
+
+fn search_comments(response: &CommentThreadListResponse, query: String) {
+    let vec_comment_threads = &response.items;
+    for vec in vec_comment_threads.iter() {
+        for entry in vec {
+            for snippet in entry.snippet.iter() {
+                if let Some(comment) = &snippet
+                    .top_level_comment
+                    .as_ref()
+                    .and_then(|c| c.snippet.as_ref())
+                    .and_then(|s| s.text_original.as_ref())
+                {
+                    if comment.contains(&query) {
+                        println!(
+                            "Your string was found in the following comment: {}",
+                            comment
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let secret = build_secret();
     let connector = hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
         .unwrap()
@@ -83,22 +113,7 @@ async fn main() {
         },
         Ok(res) => {
             let search_str = std::env::var("SEARCH_STRING").expect("SEARCH_STRING not set");
-            let vec_comment_threads = res.1.items;
-            for vec in vec_comment_threads.iter() {
-                for entry in vec {
-                    for snippet in entry.snippet.iter() {
-                        if let Some(comment) = &snippet.top_level_comment {
-                            if let Some(snippet) = &comment.snippet {
-                                if let Some(text) = &snippet.text_original {
-                                    if text.contains(&search_str) {
-                                        println!("Your string was found in: {}", text)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            search_comments(&res.1, search_str);
         }
     }
 }
